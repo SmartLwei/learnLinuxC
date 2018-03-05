@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1520253979 source:/home/lwei/projects_codeblocks/test/main.cpp
+	<pthread.h>
+	<stdio.h>
+	<sys/time.h>
+	<string.h>
+	<unistd.h>
+
