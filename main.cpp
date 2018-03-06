@@ -355,15 +355,9 @@ bool exit_flag = false;
 //随机数种子
 unsigned int seed;
 
-//辅助函数，打印n个制表符
-void printNTab(int n)
-{
-    for(int i=0;i<n*3;i++)
-        printf("\t");
-}
-
 int main()
 {
+    top = 0;
     int *symbols = new int[5];    //标识5个线程
     for(int i=0; i<5; i++)
         symbols[i] = i+1;
@@ -377,7 +371,7 @@ int main()
     {
         if(pthread_create(&thread[i],NULL,thread1_4,&symbols[i])!=0)
         {
-            printf("线程%d创建失败!\n",i);
+            printf("线程%d创建失败!\n",i+1);
             return -1;
         }
     }
@@ -400,52 +394,42 @@ int main()
 static void * thread1_4(void * id)
 {
     int threadNumber = *(int *)id;
-    printf("线程%d初始化\n",threadNumber);
+    printf("线程%d创建成功\n",threadNumber);
     while(!exit_flag)
     {
         //因为线程1-4需要竞争对buf的写入，所以需要加上互斥锁
-        printNTab(threadNumber);
-        printf("线程%d等待锁\n",threadNumber);
         pthread_mutex_lock(&mutex_g);
-        printNTab(threadNumber);
-        printf("top = %d\n",top);
-        printNTab(threadNumber);
-        printf("运行线程%d",threadNumber);
         if(exit_flag)   //等待后被唤醒，首先检查退出标志是否已经被置位
         {
             pthread_mutex_unlock(&mutex_g);
             break;
         }
-        printf(".");
+        if(top == N)
+        {
+            usleep(1);
+            pthread_mutex_unlock(&mutex_g);
+            continue;
+        }
         //填充buf
         if(RANDOM == true)
         {
             //获得一个1-100的随机数
-            buf[top++] = rand_r(&seed)%100;
+            buf[top++] = rand();
         }
         else
-            buf[top++] = *(int *)id;
-        printf(".");
+            buf[top++] = threadNumber;
 
         if(top == N)
         {
-            printf(".\n");
-            printNTab(threadNumber);
-            printf("线程%d准备唤醒线程5\n",threadNumber);
             // 注：可以在这里也加一个cond条件，避免线程1-4与线程5抢夺资源，而是利用线程5唤醒该线程
             pthread_cond_signal(&cond_g);
             //在线程5计算平均数的过程中，不允许线程1-4对buf进行修改，一方面可以通过线程1-4判断top的值，如果
             //top==N，则continue等待
             //更好的办法是，在这里再加一个锁进行等待，等待线程5计算完平均数后，再继续执行，代码如下
-            pthread_mutex_unlock(&mutex_g);
-            continue;
         }
-        printf(".\n");
-        sleep(1);
-        usleep(100000);
+        usleep(1);
         pthread_mutex_unlock(&mutex_g);
     }
-    printNTab(threadNumber);
     printf("线程%d运行结束\n",threadNumber);
     return NULL;
 }
@@ -453,19 +437,13 @@ static void * thread1_4(void * id)
 static void * thread5(void * id)
 {
     int threadNumber = *(int *)id;
-    printf("线程%d初始化\n",threadNumber);
+    printf("线程%d创建成功\n",threadNumber);
     while(!exit_flag)
     {
-        printNTab(threadNumber);
-        printf("线程%d等待锁\n",threadNumber);
         pthread_mutex_lock(&mutex_g);
         //等待其他线程根据条件top=N唤醒
         //如果在等待的过程中，exit_flag被设置为true，应怎么办？
         pthread_cond_wait(&cond_g,&mutex_g);
-        printNTab(threadNumber);
-        printf("运行线程%d***\n",threadNumber);
-        printNTab(threadNumber);
-        printf("线程5中top = %d\n",top);
         if(exit_flag)   //等待后被唤醒，首先检查退出标志是否已经被置位
         {
             pthread_mutex_unlock(&mutex_g);
@@ -473,28 +451,16 @@ static void * thread5(void * id)
         }
         //打印求平均值的过程
         int sum = 0;
-        printNTab(threadNumber);
-        printf("(");
-        for(int i=0; i<top; i++)
-        {
-            sum += buf[i];
-            printf("%d",buf[i]);
-            if(i!=top-1)
-                printf(" + ");
-        }
-        printf(") / %d = %.2f \n", top, double(sum) / double(top));
+        printf("\t\t\t(");
+
         top = 0;
-        sleep(1);
-        usleep(100000);
-        pthread_mutex_unlock(&mutex_g);
+        usleep(1);
+        //printf("\t\t\t线程%d释放锁资源\n",threadNumber);
+        //pthread_mutex_unlock(&mutex_g);
     }
-    printNTab(threadNumber);
-    printf("线程%d运行结束\n",threadNumber);
+    printf("\t\t\t线程%d运行结束\n",threadNumber);
     return NULL;
 }
-
-
-
 #endif // MYTEST_THREAD3
 
 
