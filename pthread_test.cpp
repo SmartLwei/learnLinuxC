@@ -185,9 +185,11 @@ pthread_mutex_t mutex_g=PTHREAD_MUTEX_INITIALIZER;
 static int count_g = 0;
 static int data_g[N];
 volatile int quit_g = 0;
+unsigned int seed;
 
 int main(int argc, char** argv)
 {
+    seed=time(NULL);        //获取当前时间（从1900年到现在的秒数）
     int i;
     int *symbols = new int[10] {0,1,2,3,4,5,6,7,8,9};       //用以标识不同的线程
 #define NUM_WORKERS (4)
@@ -261,9 +263,8 @@ static void * worker_thread(void * param)
             pthread_mutex_unlock(&mutex_g);
             break;
         }
-        unsigned int seed=time(NULL);        //获取当前时间（从1900年到现在的秒数）
-        seed = rand_r(&seed)%10000;
-        usleep(seed);     //模拟真实场景下可能需要的工作量
+
+        usleep(rand_r(&seed)%10000);     //模拟真实场景下可能需要的工作量
         data_g[count_g++] = *(int*) param;
         if(count_g == N)
         {
@@ -315,38 +316,44 @@ static void * wait_thread(void *)
 线程提供数字1或者随机数到buf,第2个进程提供数字2或者随机数到buf。当buf中数的个数为N
 时，暂停1-4号线程，并在第5个线程中计算5个数的平均数，计算完成后清空buf，1-4号线程
 再次以竞争的方式向buf提供数字。。。
+有求程序在任意位置sleep()任意时间都不会打乱程序的逻辑，即程序不受处理器时间的影响
 分析：
 1-4号线程必须利用互斥锁，以避免向buf中填充数字时发生冲突
 buf中的数字个数小于N时，5号线程需要暂停等待
 当1-4号线程发现buf中的数字个数为N是，唤醒5号线程
 5号线程运行过程中，需要暂停1-4号线程，以避免buf的读写冲突
-(也就是说1-5号进程两两互斥)
 1-4号线程可以使用同一个函数
 设置一个退出的flag全局变量，当flag没有被设置为ture时，1-5号线程进行while循环
 当flag被设置为true时，线程尝试结束
+
+
 */
 #include <pthread.h>         //pthread相关
 #include <stdio.h>          //标准输入输出
 #include <unistd.h>         //包含sleep()函数
 #include <stdlib.h>         //包含rand_r()函数，用以生成一个随机数
+#include <time.h>
 
 #define N  6                    //buf中需要的数字个数
 #define RANDOM false    //使用随机数还是固定的数。使用随机数更显该程序的真实，使用固定的数便于程序理解
+#define SLEEP_RANDOM //usleep(rand()%1000);
 
 //线程1-4调用该函数，用于向buf中填充数据
 static void * thread1_4(void *);
 //线程5调用，用于计算buf中N个数的平均数
 static void * thread5(void *);
 
-//互斥锁，用于线程1-5争夺对buf的操作
+//互斥锁，用于线程1-4号线程对buf的写入控制
 pthread_mutex_t mutex_g = PTHREAD_MUTEX_INITIALIZER;
-//条件锁，用于线程1-4在检测到top==N时唤醒线程5
-pthread_cond_t cond_g = PTHREAD_COND_INITIALIZER;
-//互斥锁，用于唤醒线程在唤醒线程5后，自己加锁等待
+//用于线程5的唤醒
 pthread_mutex_t mutex2_g = PTHREAD_MUTEX_INITIALIZER;
-//条件锁，用于线程5在计算完平均数后，唤醒 唤醒线程5的线程
+//用于线程5的唤醒
 pthread_cond_t cond2_g = PTHREAD_COND_INITIALIZER;
-//存放N个数的buf
+//用于线程5唤醒1-4号线程
+pthread_mutex_t mutex3_g = PTHREAD_MUTEX_INITIALIZER;
+//用于线程5唤醒1-4号线程
+pthread_cond_t cond3_g = PTHREAD_COND_INITIALIZER;
+
 int buf[N] = {0};
 //指向buf中的top位置，如果top=N，线程5被唤醒
 int top = 0;
@@ -385,18 +392,27 @@ int main()
     }
     //将结束程序标志设为ture，各个线程准备结束
     exit_flag = true;
+    pthread_cond_broadcast(&cond2_g);
+    pthread_cond_broadcast(&cond3_g);
     for(int i=0; i<5; i++)
         pthread_join(thread[i],NULL);
     delete[] symbols;
+    pthread_mutex_destroy(&mutex_g);
+    pthread_mutex_destroy(&mutex2_g);
+    pthread_cond_destroy(&cond2_g);
+     pthread_mutex_destroy(&mutex3_g);
+    pthread_cond_destroy(&cond3_g);
     return 0;
 }
 
 static void * thread1_4(void * id)
 {
+    SLEEP_RANDOM
     int threadNumber = *(int *)id;
     printf("线程%d创建成功\n",threadNumber);
     while(!exit_flag)
     {
+        SLEEP_RANDOM
         //因为线程1-4需要竞争对buf的写入，所以需要加上互斥锁
         pthread_mutex_lock(&mutex_g);
         if(exit_flag)   //等待后被唤醒，首先检查退出标志是否已经被置位
@@ -404,29 +420,39 @@ static void * thread1_4(void * id)
             pthread_mutex_unlock(&mutex_g);
             break;
         }
-        if(top == N)
-        {
-            usleep(1);
-            pthread_mutex_unlock(&mutex_g);
-            continue;
-        }
-        //填充buf
-        if(RANDOM == true)
-        {
-            //获得一个1-100的随机数
-            buf[top++] = rand();
-        }
-        else
-            buf[top++] = threadNumber;
-
+        SLEEP_RANDOM
         if(top == N)
         {
             // 注：可以在这里也加一个cond条件，避免线程1-4与线程5抢夺资源，而是利用线程5唤醒该线程
-            pthread_cond_signal(&cond_g);
+            //pthread_cond_signal(&cond2_g);
             //在线程5计算平均数的过程中，不允许线程1-4对buf进行修改，一方面可以通过线程1-4判断top的值，如果
             //top==N，则continue等待
             //更好的办法是，在这里再加一个锁进行等待，等待线程5计算完平均数后，再继续执行，代码如下
+            printf("top = %d\n",N);
+            pthread_mutex_lock(&mutex3_g);
+            SLEEP_RANDOM
+            pthread_cond_broadcast(&cond2_g);
+            SLEEP_RANDOM
+            pthread_cond_wait(&cond3_g,&mutex3_g);
+            SLEEP_RANDOM
+            pthread_mutex_unlock(&mutex3_g);
+            SLEEP_RANDOM
+            pthread_mutex_unlock(&mutex_g);
+            usleep(1);      //本线程稍微延迟，以给其他线程更多的机会
+            continue;
         }
+//        if(top == N)
+//        {
+//            printf("线程%d正在与线程5抢夺资源\n",threadNumber);
+//            pthread_cond_broadcast(&cond2_g);
+//            pthread_mutex_unlock(&mutex_g);
+//            getchar();
+//            continue;
+//        }
+        //填充buf
+
+        buf[top++] = threadNumber;
+
         usleep(1);
         pthread_mutex_unlock(&mutex_g);
     }
@@ -436,29 +462,52 @@ static void * thread1_4(void * id)
 
 static void * thread5(void * id)
 {
+    SLEEP_RANDOM
     int threadNumber = *(int *)id;
     printf("线程%d创建成功\n",threadNumber);
+    struct timespec timeout;
+    timeout.tv_sec = time(NULL) +1;
     while(!exit_flag)
     {
-        pthread_mutex_lock(&mutex_g);
+        SLEEP_RANDOM
+        pthread_mutex_lock(&mutex2_g);
+        SLEEP_RANDOM
         //等待其他线程根据条件top=N唤醒
         //如果在等待的过程中，exit_flag被设置为true，应怎么办？
-        pthread_cond_wait(&cond_g,&mutex_g);
+        pthread_cond_timedwait(&cond2_g,&mutex2_g,&timeout);
+        SLEEP_RANDOM
+        //pthread_cond_wait(&cond2_g,&mutex2_g);
         if(exit_flag)   //等待后被唤醒，首先检查退出标志是否已经被置位
         {
-            pthread_mutex_unlock(&mutex_g);
+            pthread_mutex_unlock(&mutex2_g);
+            SLEEP_RANDOM
             break;
         }
         //打印求平均值的过程
         int sum = 0;
-        printf("\t\t\t(");
-
+        printf("\t\t(");
+        SLEEP_RANDOM
+        for(int i=0;i<N;i++)
+        {
+            printf("%d",buf[i]);
+            sum += buf[i];
+            if(i!=top-1)
+                printf(" + ");
+        }
+        printf(") / %d = %.2f \n",top,(double)sum/(double)top);
+        SLEEP_RANDOM
         top = 0;
-        usleep(1);
-        //printf("\t\t\t线程%d释放锁资源\n",threadNumber);
-        //pthread_mutex_unlock(&mutex_g);
+        pthread_mutex_lock(&mutex3_g);
+        SLEEP_RANDOM
+        pthread_cond_signal(&cond3_g);
+        SLEEP_RANDOM
+        pthread_mutex_unlock(&mutex3_g);
+        SLEEP_RANDOM
+        pthread_mutex_unlock(&mutex2_g);
+        SLEEP_RANDOM
+        //usleep(100000);
     }
-    printf("\t\t\t线程%d运行结束\n",threadNumber);
+    printf("线程%d运行结束\n",threadNumber);
     return NULL;
 }
 #endif // MYTEST_THREAD3
