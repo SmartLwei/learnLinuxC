@@ -41,3 +41,5 @@ test.layout
 pthread_test
 socket_client_test
 socket_server_test
+fork_test
+primer_transformation_test

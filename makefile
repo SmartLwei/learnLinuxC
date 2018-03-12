@@ -1,14 +1,14 @@
-CC := g++
-CFLAGS = 
-TARGET = pthread_test socket_client_test socket_server_test
+CXX := g++
+CFLAGS =
+LDFLAG = -lpthread
+
+OBJECTS_CPP := $(shell ls *.cpp)
+TARGET := $(subst .cpp, ,$(OBJECTS_CPP))
 
 all: $(TARGET)
 
-pthread_test: pthread_test.cpp
-	$(CC) $< -lpthread -o $@
-socket_client_test: socket_client_test.cpp
-	$(CC) $< -o $@
-socket_server_test: socket_server_test.cpp
-	$(CC) $< -o $@
+% : %.cpp
+	$(CXX) $< $(LDFLAG) -o $@
+
 clean:
 	-rm $(TARGET)
