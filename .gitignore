@@ -8,6 +8,10 @@ fork_test
 primer_transformation_test
 socket_un_server_test
 socket_un_client_test
+socket_un_client_test_debug_backup
+socket_un_server_test_debug_backup
+
+
 
 # directory
 /obj/
