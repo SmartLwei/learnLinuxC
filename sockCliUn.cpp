@@ -17,6 +17,7 @@ int main()
     int servUnLen = 0;
     int value_ret = 0;
     connectedFd = socket(AF_UNIX,SOCK_STREAM,0);
+    cout << "connectedFd = " << connectedFd << endl; 
     memset(&servUn,0,sizeof(servUn));
     servUn.sun_family = AF_UNIX;
     strcpy(servUn.sun_path, UNIX_DOMAIN);

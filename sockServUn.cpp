@@ -18,6 +18,7 @@ int main()
     int readLen =0, writeLen = 0;
     int value_ret = 0;
     servFd = socket(AF_UNIX,SOCK_STREAM,0);
+    cout << "servFd = " << servFd << endl;
     unlink(UNIX_DOMAIN);
     memset(&servUn,0,sizeof(servUn));
     servUn.sun_family = AF_UNIX;
@@ -42,6 +43,7 @@ int main()
         return -1;
     }
     cliFd = accept(servFd, (sockaddr*)&cliUn, (socklen_t*)&cliUnLen);
+    cout << "cliFd = " << cliFd << endl;
     if(cliFd < 0)
     {
         perror("accept error \n");
