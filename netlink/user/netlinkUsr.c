@@ -37,6 +37,7 @@ int main(int argc, char **argv)
     struct nlmsghdr *nlh = NULL;
     struct _my_msg info;
     int ret;
+    int len_dest_addr = 0;
 
     skfd = socket(AF_NETLINK, SOCK_RAW, USER_MSG);
     if(skfd == -1)
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
     }
     printf("wait kernel msg!\n");
     memset(&info, 0, sizeof(info));
-    ret = recvfrom(skfd, &info, sizeof(struct _my_msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    ret = recvfrom(skfd, &info, sizeof(struct _my_msg), 0, (struct sockaddr *)&dest_addr, &len_dest_addr);
     if(!ret)
     {
         perror("recv form kernel error\n");
