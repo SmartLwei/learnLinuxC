@@ -1,1 +1,0 @@
-cmd_/home/lwei/projects_codeblocks/other_test/modules/hello.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/lwei/projects_codeblocks/other_test/modules/hello.ko /home/lwei/projects_codeblocks/other_test/modules/hello.o /home/lwei/projects_codeblocks/other_test/modules/hello.mod.o ;  true

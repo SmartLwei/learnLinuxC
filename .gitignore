@@ -12,6 +12,14 @@ socket_un_client_test_debug_backup
 socket_un_server_test_debug_backup
 
 
+#modules
+*.ko.cmd
+*.mod.o.cmd
+*.o.cmd
+*.symvers
+*.ko
+*.mod.c
+*.order
 
 # directory
 /obj/
