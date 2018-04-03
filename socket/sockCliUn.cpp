@@ -39,7 +39,7 @@ int main()
         cout << "writeLen = " << writeLen << endl;
         if(writebuf[0] == 'q')
             break;
-        readLen = read(connectedFd, readbuf, 88);
+        readLen = read(connectedFd, readbuf, 1000);
         cout << "readbuf = " << readbuf << endl;
         cout << "readLen = " << readLen << endl;
     }

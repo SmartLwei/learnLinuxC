@@ -1,4 +1,4 @@
-obj-m += its_netlink.c
+obj-m += mynlkern.o
 #注：**.o必须与c文件同名，否则编译将会失败
 #generate the path
 CURRENT_PATH:=$(shell pwd)

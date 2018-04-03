@@ -5,6 +5,7 @@ author:         arvik
 email:          1216601195@qq.com
 blog:           http://blog.csdn.net/u012819339
 *******************************/
+//中文测试
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -30,11 +31,11 @@ struct _my_msg
 
 int main(int argc, char **argv)
 {
-    char *data = "hello kernel";
-    struct sockaddr_nl  local, dest_addr;
+    const char *data = "hello kernel";
+    struct sockaddr_nl  local_addr, dest_addr;
 
     int skfd;
-    struct nlmsghdr *nlh = NULL;
+    struct nlmsghdr *nlherder = NULL;
     struct _my_msg info;
     int ret;
     int len_dest_addr = 0;
@@ -46,11 +47,11 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    memset(&local, 0, sizeof(local));
-    local.nl_family = AF_NETLINK;
-    local.nl_pid = 50; 
-    local.nl_groups = 0;
-    if(bind(skfd, (struct sockaddr *)&local, sizeof(local)) != 0)
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.nl_family = AF_NETLINK;
+    local_addr.nl_pid = 50;
+    local_addr.nl_groups = 0;
+    if(bind(skfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) != 0)
     {
         printf("bind() error\n");
         close(skfd);
@@ -62,16 +63,16 @@ int main(int argc, char **argv)
     dest_addr.nl_pid = 0; // to kernel
     dest_addr.nl_groups = 0;
 
-    nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PLOAD));
-    memset(nlh, 0, sizeof(struct nlmsghdr));
-    nlh->nlmsg_len = NLMSG_SPACE(MAX_PLOAD);
-    nlh->nlmsg_flags = 0;
-    nlh->nlmsg_type = 0;
-    nlh->nlmsg_seq = 0;
-    nlh->nlmsg_pid = local.nl_pid; //self port
+    nlherder = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PLOAD));
+    memset(nlherder, 0, sizeof(struct nlmsghdr));
+    nlherder->nlmsg_len = NLMSG_SPACE(MAX_PLOAD);
+    nlherder->nlmsg_flags = 0;
+    nlherder->nlmsg_type = 0;
+    nlherder->nlmsg_seq = 0;
+    nlherder->nlmsg_pid = local_addr.nl_pid; //self port
 
-    memcpy(NLMSG_DATA(nlh), data, strlen(data));
-    ret = sendto(skfd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr_nl));
+    memcpy(NLMSG_DATA(nlherder), data, strlen(data));
+    ret = sendto(skfd, nlherder, nlherder->nlmsg_len, 0, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr_nl));
 
     if(!ret)
     {
@@ -81,7 +82,7 @@ int main(int argc, char **argv)
     }
     printf("wait kernel msg!\n");
     memset(&info, 0, sizeof(info));
-    ret = recvfrom(skfd, &info, sizeof(struct _my_msg), 0, (struct sockaddr *)&dest_addr, &len_dest_addr);
+    ret = recvfrom(skfd, &info, sizeof(struct _my_msg), 0, (struct sockaddr *)&dest_addr, (socklen_t*)&len_dest_addr);
     if(!ret)
     {
         perror("recv form kernel error\n");
@@ -92,7 +93,8 @@ int main(int argc, char **argv)
     printf("msg receive from kernel:%s\n", info.data);
     close(skfd);
 
-    free((void *)nlh);
+    free((void *)nlherder);
     return 0;
 
 }
+

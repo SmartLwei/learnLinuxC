@@ -54,7 +54,7 @@ int main()
     {
         memset(readbuf,0,1000);
         memset(writebuf,0,1000);
-        readLen = read(cliFd,readbuf,99);
+        readLen = read(cliFd,readbuf,1000);
         cout << "readbuf = " << readbuf << endl;
         cout << "readLen = " << readLen << endl;
         cout << "please input string to writebuf:";
