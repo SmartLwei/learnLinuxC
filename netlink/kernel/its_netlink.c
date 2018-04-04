@@ -10,6 +10,7 @@ email:          418877608@qq.com
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/types.h>
+#include <linux/slab.h>
 #include <linux/sched.h>
 #include <net/sock.h>
 #include <linux/netlink.h>
@@ -35,32 +36,61 @@ static struct sock *netlinkfd = NULL;
 
 static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
 {
-    int i=0;
-    if(ifCopy == 0)
+    int i = 0;
+    int j = 0;
+    unsigned char temp = 0;
+    char *bufH = kmalloc(2*len +3,GFP_KERNEL);
+    if(len > 2000)
     {
-        printk("0X");
-        for(i=0; i<len; i++)
-        {
-            printk("%02X",buf[i]);
-            if((i+2)%charPerLine == 0)
-                printk("\n");
-        }
-        if(((len+2)%charPerLine) != 0)
-            printk("\n");
-        return len;
+        printk("打印长度%d大于2000，我们只打印前2000字节",len);
+        len = 2000;
     }
-    else
+    //2*len 每个字符十六进制打印时站两个字节
+    //3 = '0'+'X'+最后的'\0';
+
+    if(bufH == NULL)
+        printk("error in kmallc");
+    bufH[0] = '0';
+    bufH[1] = 'X';
+    for(i=0,j=2;i<len;i++,j+=2)
     {
-        for(i=0; i<len; i++)
+        temp = buf[i]/16;
+        if(temp < 0)
         {
-            printk("0X%02X, ",buf[i]);      //便于拷贝
-            if(i%charPerLine == 0)
-                printk("\n");
+            printk("error in printk: temp<0");
+            return -1;
         }
-        if((len%charPerLine) != 0)
-            printk("\n");
-        return len;
+        else if(temp < 10)
+            bufH[j] = temp + '0';
+        else if(temp < 16)
+            bufH[j] = temp - 10 + 'A';
+        else
+        {
+            printk("error in printk: temp>=16");
+            return -1;
+        }
+        
+        temp = buf[i]%16;
+        if(temp < 0)
+        {
+            printk("error in printk: temp<0");
+            return -1;
+        }
+        else if(temp < 10)
+            bufH[j+1] = temp + '0';
+        else if(temp < 16)
+            bufH[j+1] = temp - 10 + 'A';
+        else
+        {
+            printk("error in printk: temp>=16");
+            return -1;
+        }
     }
+    bufH[2*len +3] = '\0';
+    printk("%s",buf);
+    printk("%s",bufH);
+    kfree(bufH);
+    return 2*len +3;
 }
 
 
@@ -103,7 +133,7 @@ static void recv_cb(struct sk_buff *skb)
     struct nlmsghdr *nlh = NULL;
     void *data = NULL;
     uint32_t fromWhere = 0;		//facility or security
-    printk("skb->len:%u\n", skb->len);
+    printk("skb->len:%d\n", skb->len);
     if(skb->len >= nlmsg_total_size(0))
     {
         nlh = nlmsg_hdr(skb);
@@ -149,7 +179,7 @@ static int __init test_netlink_init(void)
         return -1;
     }
     
-    printk("netlink demo init ok!\n");
+    printk("netlink demo init ok!");
     return 0;
     //虽然程序在这里返回了，但是通过上面的netlink_kernel_create系统调用
     //已经告诉了操作系统：如果来了ITS_NET协议的socket请求以及消息

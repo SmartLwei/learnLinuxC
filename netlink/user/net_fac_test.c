@@ -1,9 +1,8 @@
 /*******************************
-file:           u_netlink.c
+file:           net_fac_test
 description:    netlink demo
-author:         arvik
-email:          1216601195@qq.com
-blog:           http://blog.csdn.net/u012819339
+author:         lwei
+email:          418877608@qq.com
 *******************************/
 //中文测试
 #include <stdio.h>
@@ -22,7 +21,7 @@ blog:           http://blog.csdn.net/u012819339
 //设备层的port约定
 #define FAC_PORT    2001
 
-#define MAX_PLOAD 1000
+#define MAX_PLOAD 5000
 
 struct _my_msg
 {

@@ -22,7 +22,7 @@ blog:           http://blog.csdn.net/u012819339
 //设备层的port约定
 #define FAC_PORT    2001
 
-#define MAX_PLOAD 1000
+#define MAX_PLOAD 5000
 
 struct _my_msg
 {
