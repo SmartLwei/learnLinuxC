@@ -13,6 +13,7 @@ email:          418877608@qq.com
 #include <linux/sched.h>
 #include <net/sock.h>
 #include <linux/netlink.h>
+#include "its_netlink.h"
 
 #define ITS_NET 25          
 
@@ -35,11 +36,10 @@ static struct sock *netlinkfd = NULL;
 
 static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
 {
-    int i=0;
     if(ifCopy == 0)
     {
         printk("0X");
-        for(i=0; i<len; i++)
+        for(int i=0; i<len; i++)
         {
             printk("%02X",buf[i]);
             if((i+2)%charPerLine == 0)
@@ -51,7 +51,7 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
     }
     else
     {
-        for(i=0; i<len; i++)
+        for(int i=0; i<len; i++)
         {
             printk("0X%02X, ",buf[i]);      //便于拷贝
             if(i%charPerLine == 0)
@@ -66,7 +66,7 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
 
 //消息发送函数,发送到安全层还是设备层由port指定
 //该函数只发送消息，消息内部的数据结构不考虑
-int send_msg(unsigned char *sendBuf, int len, int port)
+int send_msg(int8_t *sendBuf, uint16_t len, uint32_t port)
 {
     struct sk_buff *nl_skb;
     struct nlmsghdr *nlh;
@@ -113,13 +113,13 @@ static void recv_cb(struct sk_buff *skb)
         {
             //调用自定义的函数处理数据
             // test
-            printh(data, nlmsg_len(nlh),10,0);
+            printk(data, nlmsg_len(nlh));
             if(fromWhere == SEC_PORT)
                 send_msg(data, nlmsg_len(nlh), FAC_PORT);
             else if(fromWhere == FAC_PORT)
                 send_msg(data, nlmsg_len(nlh), SEC_PORT);
             else
-                printk("don't know where the data come from\n");
+                PRINTK("don't know where the data come from\n");
         }
     }
 } 
