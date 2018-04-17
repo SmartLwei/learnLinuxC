@@ -1,3 +1,10 @@
+/**
+* 该例子中包含了常用的sqlite3 C++API
+* 以后用到sqlite时，可以参考本程序的API用法
+* 后续如果用到了更多的API，再来添加
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "sqlite3.h"
@@ -55,7 +62,7 @@ static int printTable(sqlite3 *db, const char* tableName, FILE* file = stdout)
 	sprintf(sql, "select * from %s;", tableName);
 	sqlite3_prepare(db, sql, -1, &stmt, NULL);
 
-	//获取表的列数
+	//获取返回结果中的列数
 	ncols = sqlite3_column_count(stmt);
 
 	value_ret = sqlite3_step(stmt);
