@@ -123,6 +123,7 @@ static int printTable(sqlite3 *db, const char* tableName, FILE* file = stdout)
 		value_ret = sqlite3_step(stmt);
 	}
 	fprintf(file,"lines = %d\n", lines);
+	sqlite3_finalize(stmt);
 	return lines;
 }
 
