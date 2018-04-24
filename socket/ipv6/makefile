@@ -1,6 +1,6 @@
 CXX := g++
 CFLAGS =
-LDFLAG = -lpthread
+LDFLAG = 
 SUBDIRS = $(shell ls -d */)
 
 OBJECTS_CPP := $(shell ls *.cpp)
