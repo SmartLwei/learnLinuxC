@@ -1,7 +1,9 @@
 /**
+* #include <time.h>
 * linux下时间获取函数
 * linux下时间保存方式有两种
 * 1. 保存从1970年到现在过了多少秒
+		time_t类型 （本质上是long int类型）
 * 2. 用结构体分别保存年月日时分秒
 struct tm
 {
@@ -25,39 +27,65 @@ struct tm
 };
 
 
+为了获得更加精确的时间信息，例如精确到微秒，纳秒,需要用到下列的结构
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#include <sys/timeb.h> 头文件中
+struct timeb
+  {
+    time_t time;		// Seconds since epoch, as from `time'.  
+    unsigned short int millitm;	// Additional milliseconds.  精确到毫秒
+    short int timezone;		// Minutes west of GMT.  
+    short int dstflag;		// Nonzero if Daylight Savings Time used.  
+  };
 
-为了获得更加精确的时间信息，例如精确到微秒，纳秒
-保存秒数和微秒数
-struct timeval
+// Fill in TIMEBUF with information about the current time. 
+//extern int ftime (struct timeb *__timebuf);
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#include <sys/time.h>  头文件中
+struct timeval	
 {
 	__time_t tv_sec;		// Seconds.  
-	__suseconds_t tv_usec;	// Microseconds.  
+	__suseconds_t tv_usec;	// Microseconds.   精确到微秒
 };
-__time_t和__suseconds_t 在32位linux下都是long int的宏定义
+__time_t和__suseconds_t 在32位linux下本质上都是long int的宏定义
 
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+struct timespec
+{
+	__time_t tv_sec;				// Seconds.  
+	__syscall_slong_t tv_nsec;		// Nanoseconds.   精确到纳秒
+};
+__syscall_slong_t 在32位linux下本质上是long int的宏定义
 
-
-
-
-
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
 */
 
 #include <iostream>
+#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
-#include <time.h>
+#include <time.h> 
+#include <sys/time.h>  	
+#include <sys/timeb.h>		
 
 using namespace std;
 int main(int argc, char* argv[])
 {
+	cout << "*****************" << endl;
+	cout << "时间日期函数" << endl;
+	cout << "*****************" << endl;
+
+
 	/**
 	对于32位linux系统，time_t本质上是 long int
 	time_t用于保存从1970年1月1日0时0分起到现在的秒数
 	因为只有32位，因此最多只能统计到2038年01月19日03时14分07秒
 	*/
-	time_t now;
+	time_t now,temp;
 	char* dt;
 	
 	/** 获取当前统计的秒数,以及打印时间 */
@@ -65,37 +93,127 @@ int main(int argc, char* argv[])
 	//time(&now); //该语句与now = time(0) 效果一模一样
 	//事实上 该函数的原型为 time_t time(&time_t *t) ,因此上面两种方法本质上是一样的
 	cout << "time(0) = " << now << endl;
-	cout << "ctime(&now) = " << ctime(&now) << endl;
-	cout << "asctime(gmtime(&now)) = " << asctime(gmtime(&now)) << endl;
-	cout << "asctime(localtime(&now)) = " << asctime(localtime(&now)) << endl;
-	cout << "从结果来看，ctime(&now)得到的是本地时间的字符串;" << endl;
+	cout << "ctime(&now) = " << ctime(&now);
+	cout << "asctime(gmtime(&now)) = " << asctime(gmtime(&now));
+	cout << "asctime(localtime(&now)) = " << asctime(localtime(&now));
+	cout << "从结果来看，ctime(&now)得到的是本地时间的字符串" << endl;
 	cout << "而asctime(gmtime(&now))得到的是UTC时间字符串" << endl;
+	cout << "asctime(localtime(&now))得到的是本地时间字符串" << endl;
 	cout << endl << endl;
 	cout << "now = " << now << endl;
 	cout << "mktime(localtime(&now)) = " << mktime(localtime(&now)) << endl;
 	cout << "mktime(gmtime(&now)) = " << mktime(gmtime(&now)) << endl;
-	cout << "asctime(gmtime(mktime(gmtime(&now)))) = ";
-	cout << asctime(gmtime(mktime(gmtime(&now)))) << endl;
-	//cout << "从结果看
+	cout << "从结果看，mktime()按照本地时间转换struct tm" << endl;
+	cout << "因此，mktime()的输入参数必须是本地时间" << endl;
+	cout << "下面给一个mktime()输入的时间的时区不匹配导致错误的情况" << endl; 
+	temp = mktime(gmtime(&now));
+	cout << "temp = mktime(gmtime(&now));" <<endl;
+	cout << "asctime(gmtime(&temp)) = ";
+	cout << asctime(gmtime(&temp)) <<  endl;
 	/** 
 	asctime(gmtime(&now))的本质是
 		gmtime()先把now转换为struct tm结构，得到的时间是一个没有经过时区转换的UTC时间
 		asctime()把sttuct tm结构转换为人类可读的字符串
 	localtime()与gmtime功能相同，只是进行了时区转换
-	mktime()将struct tm结构的时间转换为time_t的时间，注意时区的影响，
-	应该输入localtime的结构体
+	mktime()将struct tm结构的时间转换为time_t的时间
+	应该输入时区为localtime的结构体，否则会出现未知错误
 	*/
 	
 	
-	/** 上面的函数都是在以秒为单位下的时间，有时我们需要更加精确的时间，如微秒，纳秒 */
+	
+	
+	
+///////////////////////////////////////////////////////////////////////////////
 	cout << endl << endl;
+	cout << "*****************" << endl;
+	cout << "struct timeval相关函数" << endl;
+	cout << "*****************" << endl;
+///////////////////////////////////////////////////////////////////////////////
+	/** 上面的函数都是在以秒为单位下的时间，有时我们需要更加精确的时间，如微秒 */
+	/** timeval的用法,精确到微秒 */
+	struct timeval valStart,valEnd;
+
+	int timeInterval = 0;
+	gettimeofday(&valStart,NULL);
+	sleep(1);
+	gettimeofday(&valEnd,NULL);
+	timeInterval = 1000000*(valEnd.tv_sec-valStart.tv_sec)+valEnd.tv_usec-valStart.tv_usec;
+	cout << "sleep(1)时间间隔: " << timeInterval << "us" << endl; 
+	
+	gettimeofday(&valStart,NULL);
+	usleep(1);
+	gettimeofday(&valEnd,NULL);
+	timeInterval = 1000000*(valEnd.tv_sec-valStart.tv_sec)+valEnd.tv_usec-valStart.tv_usec;
+	cout << "usleep(1) 时间间隔: " << timeInterval << "us" << endl; 
+	
+	gettimeofday(&valStart,NULL);
+	//sleep(1);
+	gettimeofday(&valEnd,NULL);
+	timeInterval = 1000000*(valEnd.tv_sec-valStart.tv_sec)+valEnd.tv_usec-valStart.tv_usec;
+	cout << "NULL时间间隔: " << timeInterval << "us" << endl; 
 	
 	
 	
+	
+	
+	
+///////////////////////////////////////////////////////////////////////////////
+	cout << endl << endl;
+	cout << "*****************" << endl;
+	cout << "struct timeval相关函数" << endl;
+	cout << "*****************" << endl;
+///////////////////////////////////////////////////////////////////////////////
+	/** timespec的用法,精确到纳秒 */
+	struct timespec specStart, specEnd;
+	clock_gettime(CLOCK_REALTIME,&specStart);
+	sleep(1);
+	cout << "start time " << specStart.tv_sec <<"s, " << specStart.tv_nsec << "ns" << endl;
+	clock_gettime(CLOCK_REALTIME,&specEnd);
+	cout << "after sleep(1); Dutation: " << specEnd.tv_sec-specStart.tv_sec << "s "
+		<< specEnd.tv_nsec-specStart.tv_nsec << "ns" << endl;
 	
 	
 
 
+
+///////////////////////////////////////////////////////////////////////////////
+	cout << endl << endl;
+	cout << "*****************" << endl;
+	cout << "struct timeb 相关函数" << endl;
+	cout << "*****************" << endl;
+///////////////////////////////////////////////////////////////////////////////
+	struct timeb timebStart;
+	struct timeb timebEnd;
+	ftime(&timebStart);
+	sleep(1);
+	ftime(&timebEnd);
+	cout << "sleep(1)花费的时间为" << timebEnd.time-timebStart.time << "s "
+		<< timebEnd.millitm - timebStart.millitm << "ms" << endl;
+		
+		
+	
+///////////////////////////////////////////////////////////////////////////////
+	cout << endl << endl;
+	cout << "*****************" << endl;
+	cout << "clock相关函数" << endl;
+	cout << "*****************" << endl;
+///////////////////////////////////////////////////////////////////////////////
+	/** 下面的时间函数以时钟频率为单位 */
+	//clock_t本质上是long int的宏定义
+	clock_t clockTemp = 0, clock_start = 0, clock_end = 0, clock_interval = 0;
+	clock_start = clock();
+	cout << "clock_start = clock() = " << clock_start << endl;
+	sleep(1);
+	cout << "after sleep(1) " << endl;
+	clock_end = clock();
+	cout << "clock_end = clock() = " << clock_end << endl;
+	clock_interval = clock_end - clock_start;
+	cout << "clock_interval = " << clock_interval  << endl;
+	cout << "CLOCKS_PER_SEC = " << CLOCKS_PER_SEC << endl;
+	cout << "clock_interval = " << (double)clock_interval/CLOCKS_PER_SEC*1000 << "ms" << endl;
+	cout << "注意，这里sleep(1)后，花费的时间为什么会小于1s ???" << endl; 
+	cout << "因为sleep后，该程序会挂起，clock()不会计算挂起的这段时间" << endl;
+	cout << "本质上来说，clock()只计算本程序实际占用了CPU多少时间" << endl;
 	return 0;
 	
 }
