@@ -135,6 +135,9 @@ int main(int argc, char* argv[])
 
 	int timeInterval = 0;
 	gettimeofday(&valStart,NULL);
+	cout << "gettimeofday(&valStart,NULL)获取的时间为: " <<endl;
+	cout << "valStart.tv_sec = " << valStart.tv_sec << endl;
+	cout << "valStart.tv_usec = " << valStart.tv_usec << endl;
 	sleep(1);
 	gettimeofday(&valEnd,NULL);
 	timeInterval = 1000000*(valEnd.tv_sec-valStart.tv_sec)+valEnd.tv_usec-valStart.tv_usec;
@@ -160,7 +163,7 @@ int main(int argc, char* argv[])
 ///////////////////////////////////////////////////////////////////////////////
 	cout << endl << endl;
 	cout << "*****************" << endl;
-	cout << "struct timeval相关函数" << endl;
+	cout << "struct timespec相关函数" << endl;
 	cout << "*****************" << endl;
 ///////////////////////////////////////////////////////////////////////////////
 	/** timespec的用法,精确到纳秒 */
