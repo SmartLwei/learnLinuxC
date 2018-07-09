@@ -1,11 +1,11 @@
 CXX := gcc
-TARGETS := net_fac_test net_sec_test 
+TARGETS := user1 user2 
 
 all: $(TARGETS)
 	
-net_fac_test: net_fac_test.c
+user1: user1.c
 	$(CXX) $^ -o $@
-net_sec_test: net_sec_test.c
+user2: user2.c
 	$(CXX) $^ -o $@
 
 

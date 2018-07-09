@@ -1,7 +1,6 @@
 /*******************************
-file:           its_netlink.c
-description:    实现网络层与安全层的通信
-                实现网路成与传送层的通信
+file:           MYPROTOCOLlink.c
+description:    利用netlink实现用户态和内核态的通信
 kernel:         linux-
 author:         Lwei
 email:          418877608@qq.com
@@ -15,39 +14,42 @@ email:          418877608@qq.com
 #include <net/sock.h>
 #include <linux/netlink.h>
 
-#define ITS_NET 25          
+#define MYPROTOCOL 25          
 
-//安全层的port约定
+//应用1的port约定
 //(随便写的，只要与用户态使用是相同且不冲突就行)
-#define SEC_PORT    2000
-//设备层的port约定
-#define FAC_PORT    2001
+#define PORT1    2000
+//应用2的port约定
+#define PORT2    2001
 
 MODULE_LICENSE("GPL");  
 MODULE_AUTHOR("Lwei");  
-MODULE_DESCRIPTION("its_netlink_demo");
+MODULE_DESCRIPTION("MYPROTOCOLlink_demo");
 
 
 //类似于一个服务器fd
-//与用户态的int fd=socket(协议族，传输类型，子协议)做类比
+//与用户态的int fd=socket(协议域，传输类型，子协议)做类比
 //监听自定义协议
 static struct sock *netlinkfd = NULL;
 
-
-static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
+/**
+* 以十六进制的方式打印数组
+* 不用printk("%02X",buf[i])的原因是，printk会自动换行
+*/
+static int printh(unsigned char* buf, int len)
 {
     int i = 0;
     int j = 0;
     unsigned char temp = 0;
+    //2*len 每个字符十六进制打印时占两个字节
+    //3 = '0'+'X'+最后的'\0';
     char *bufH = kmalloc(2*len +3,GFP_KERNEL);
     if(len > 2000)
     {
         printk("打印长度%d大于2000，我们只打印前2000字节",len);
         len = 2000;
     }
-    //2*len 每个字符十六进制打印时站两个字节
-    //3 = '0'+'X'+最后的'\0';
-
+    
     if(bufH == NULL)
         printk("error in kmallc");
     bufH[0] = '0';
@@ -58,7 +60,7 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
         if(temp < 0)
         {
             printk("error in printk: temp<0");
-            return -1;
+            goto err;
         }
         else if(temp < 10)
             bufH[j] = temp + '0';
@@ -67,14 +69,14 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
         else
         {
             printk("error in printk: temp>=16");
-            return -1;
+            goto err;
         }
         
         temp = buf[i]%16;
         if(temp < 0)
         {
             printk("error in printk: temp<0");
-            return -1;
+            goto err;
         }
         else if(temp < 10)
             bufH[j+1] = temp + '0';
@@ -83,7 +85,7 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
         else
         {
             printk("error in printk: temp>=16");
-            return -1;
+            goto err;
         }
     }
     bufH[2*len +3] = '\0';
@@ -91,15 +93,18 @@ static int printh(unsigned char* buf, int len, int charPerLine, int ifCopy)
     printk("%s",bufH);
     kfree(bufH);
     return 2*len +3;
+err:
+    kfree(bufH);
+    return -1;
 }
 
 
-//消息发送函数,发送到安全层还是设备层由port指定
+//消息发送函数,发送到应用1还是应用2由port指定
 //该函数只发送消息，消息内部的数据结构不考虑
 int send_msg(unsigned char *sendBuf, int len, int port)
 {
-    struct sk_buff *nl_skb;
-    struct nlmsghdr *nlh;
+    struct sk_buff *nl_skb = NULL;
+    struct nlmsghdr *nlh = NULL;
 
     int ret;
     
@@ -132,7 +137,7 @@ static void recv_cb(struct sk_buff *skb)
 {
     struct nlmsghdr *nlh = NULL;
     void *data = NULL;
-    uint32_t fromWhere = 0;		//facility or security
+    uint32_t fromWhere = 0;		//应用1还是应用2
     printk("skb->len:%d\n", skb->len);
     if(skb->len >= nlmsg_total_size(0))
     {
@@ -142,12 +147,12 @@ static void recv_cb(struct sk_buff *skb)
         if(data)
         {
             //调用自定义的函数处理数据
-            // test
-            printh(data, nlmsg_len(nlh),10,0);
-            if(fromWhere == SEC_PORT)
-                send_msg(data, nlmsg_len(nlh), FAC_PORT);
-            else if(fromWhere == FAC_PORT)
-                send_msg(data, nlmsg_len(nlh), SEC_PORT);
+            //这里我们打印这些消息，具体怎么处理，请自定义
+            printh(data, nlmsg_len(nlh));
+            if(fromWhere == PORT1)
+                send_msg(data, nlmsg_len(nlh), PORT2);
+            else if(fromWhere == PORT2)
+                send_msg(data, nlmsg_len(nlh), PORT1);
             else
                 printk("don't know where the data come from\n");
         }
@@ -168,10 +173,10 @@ static int __init test_netlink_init(void)
 {
     printk("init netlink_demo!\n");
 
-    //向系统注册我们自定义的NET_SEC子协议和NET_FAC子协议
+    //向系统注册我们自定义的MYPROTOCOL子协议
     //如果我们没有向系统注册该子协议，则在用户态编程时
-    //skfd = socket(AF_NETLINK, SOCK_RAW, NET_SEC);函数会返回-1
-    netlinkfd = netlink_kernel_create(&init_net, ITS_NET, &cfg);
+    //skfd = socket(AF_NETLINK, SOCK_RAW, MYPROTOCOL);函数会返回-1
+    netlinkfd = netlink_kernel_create(&init_net, MYPROTOCOL, &cfg);
     
     if(!netlinkfd)
     {
@@ -182,8 +187,8 @@ static int __init test_netlink_init(void)
     printk("netlink demo init ok!");
     return 0;
     //虽然程序在这里返回了，但是通过上面的netlink_kernel_create系统调用
-    //已经告诉了操作系统：如果来了ITS_NET协议的socket请求以及消息
-    //就调用cfg中的回调函数
+    //已经告诉了操作系统：如果来了MYPROTOCOL协议的socket请求以及消息
+    //就调用cfg中的回调函数处理数据
 }
 
 static void __exit test_netlink_exit(void)

@@ -14,12 +14,12 @@ email:          418877608@qq.com
 #include <unistd.h>
 #include <errno.h>
 
-#define ITS_NET 25          
-//安全层的port约定
+#define MYPROTOCOL 25          
+//应用1的port约定
 //(随便写的，只要与用户态使用是相同且不冲突就行)
-#define SEC_PORT    2000
-//设备层的port约定
-#define FAC_PORT    2001
+#define PORT1    2000
+//应用2的port约定
+#define PORT2    2001
 
 #define MAX_PLOAD 5000
 
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     int ret;
     int len_dest_addr = 0;
 
-    skfd = socket(AF_NETLINK, SOCK_RAW, ITS_NET);
+    skfd = socket(AF_NETLINK, SOCK_RAW, MYPROTOCOL);
     if(skfd == -1)
     {
         printf("create socket error...%s\n", strerror(errno));
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.nl_family = AF_NETLINK;
-    local_addr.nl_pid = FAC_PORT;
+    local_addr.nl_pid = PORT2;
     local_addr.nl_groups = 0;
     if(bind(skfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) != 0)
     {
