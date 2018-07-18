@@ -31,18 +31,22 @@ int main()
 
 	if ((pid = fork()) < 0)  // 创建子进程
 		printf("Fork Error!\n");
-	else if (pid > 0)  // 父进程
+
+	 // 父进程
+	else if (pid > 0) 	
 	{
 		close(fd[0]); // 关闭读端
 		write(fd[1], "hello world\n", 12);
 		close(fd[1]);
 	}
+
+	// 子进程
 	else
 	{
 		close(fd[1]); // 关闭写端
 		int readLen = read(fd[0], buff, 20);
 		buff[readLen] = '\0';
-		printf("%s", buff);
+		printf("子进程收到的数据为: %s", buff);
 		close(fd[0]);
 	}
 
