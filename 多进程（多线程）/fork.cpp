@@ -7,38 +7,74 @@ fork()函数
     返回值为负数则出错
 */
 
-#include <stdio.h>
-#include <unistd.h>
+/**
+* 创建进程函数fork()
+* 失败返回-1，父进程返回子进程的id，子进程返回0
+* 该函数测试父子进程之间的数据共享
+* 从结果看：
+* 全局变量，堆变量，栈变量，父子进程无关
+*/
+
+
+#include <iostream>
+#include <stdlib.h>		//malloc()函数
+#include <unistd.h>		//fork()函数
+using namespace std;
+
+#define DEBUG_PRINT(N) cout << __LINE__ << ": " << N << endl;
+#define DEBUG_PRINT_ADDR(N) cout << #N << ": " << N << " at " << &N << endl;
+
+int globalVar = 1;
+
 int main()
 {
-    //pid_t在Linux 32位中本质上是int类型
+    //保存进程id
     pid_t pid;
-    //子进程并不会执行父进程调用fork()之前的函数调用
-    printf("执行fork()之前的函数调用\n");
-    int count = 0;
+    int stackVar = 1;
+    const char* constVar = "AString";
+    int *heapVar = (int*)malloc(sizeof(int));
+    *heapVar = 1;
+
     pid = fork();
-    //子进程的返回值为0
-    if(pid == 0)
+    if(pid < 0)
     {
-        printf("this is child process, pid is %d \n",getpid());
-        count += sizeof(pid);
-        //usleep(100);
-        printf("child fork()return value is %d, count = %d\n",pid, count);
+        DEBUG_PRINT("fork()失败");
+        return 0;
     }
-    //父进程的返回值为子进程的PID
-    else if(pid >0)
-    {
-        printf("this is father process, pid is %d \n", getpid());
-        count++;
-        //如果加上一定的延迟等待，则父进程和子进程抢夺资源的行为就可以显现出来
-        //usleep(100);
-        printf("father fork()return value is %d, count = %d\n",pid, count);
-    }
-    //如果返回值为负数，则出现了错误
-    else
-    {
-        fprintf(stderr,"ERROR: fork() failed\n");
-    }
-    //sleep(1);
-    return 0;
+     else if(pid == 0)
+     {
+         DEBUG_PRINT("子进程：")
+         globalVar++;
+         stackVar++;
+         (*heapVar)++;
+         DEBUG_PRINT_ADDR(globalVar);
+         DEBUG_PRINT_ADDR(stackVar);
+         DEBUG_PRINT_ADDR(*heapVar);
+         DEBUG_PRINT_ADDR(constVar);
+     }
+     else
+     {
+         usleep(1000);
+         DEBUG_PRINT("父进程：")
+         DEBUG_PRINT_ADDR(globalVar);
+         DEBUG_PRINT_ADDR(stackVar);
+         DEBUG_PRINT_ADDR(*heapVar);
+         DEBUG_PRINT_ADDR(constVar);
+         if(globalVar != 1)
+            cout << "全局变量父子进程相关"  << endl;
+         else
+            cout << "全局变量父子进程无关" << endl;
+
+         if(stackVar != 1)
+            cout << "栈变量父子进程相关"  << endl;
+         else
+            cout << "栈变量父子进程无关" << endl;
+
+        if(*heapVar != 1)
+            cout << "堆变量父子进程相关"  << endl;
+         else
+            cout << "堆变量父子进程无关" << endl;
+     }
+     return 0;
 }
+

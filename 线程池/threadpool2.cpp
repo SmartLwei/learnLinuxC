@@ -1,19 +1,21 @@
 #include <assert.h>
-#include <sys/types.h>
 #include <sys/syscall.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 #include "threadpool2.h"
 using std::cout; using std::cin; using std::endl;
+using std::stringstream;
 
-#define DEBUG_PRINT_ERROR(MSG) cout<<"Error in: "<< __FUNCTION__ << ",line:" << __LINE__ << endl << MSG << endl;
-#define DEBUG_PRINT_PROCESS(MSG) cout << __FUNCTION__ << ", line:" << __LINE__ << endl << syscall(224) << ": " << MSG << endl;
-
+#define DEBUG_PRINT_ERROR(MSG) {stringstream str; str << "Error in: "<< __FUNCTION__ << ",line:" << __LINE__ << endl << MSG << endl; cout << str.str();}
+#define DEBUG_PRINT_PROCESS(MSG) {stringstream str; str << __FUNCTION__ << ", line:" << __LINE__ << endl << syscall(224) << ": " << MSG << endl << endl; cout << str.str();}
+#define DEBUG_PRINT_FUNCTION_IN {stringstream str; str << syscall(224) << ":Enter " <<__FUNCTION__ << endl << endl; cout << str.str(); }
+#define DEBUG_PRINT_FUNCTION_OUT {stringstream str; str << syscall(224) << ":Exit " <<__FUNCTION__ << endl << endl; cout <<str.str();}
 
 //初始化线程池
 struct threadpool* threadpool_init(int thread_num, int queue_max_num)
 {
+	DEBUG_PRINT_FUNCTION_IN
 	struct threadpool* pool=NULL;
 	do
 	{
@@ -58,10 +60,12 @@ struct threadpool* threadpool_init(int thread_num, int queue_max_num)
 		pool->pool_close = 0;
 		int i;
 		//创建线程池
+		DEBUG_PRINT_PROCESS("开始创建子线程");
 		for(i=0; i<pool->thread_num; ++i)
 		{
 			pthread_create(&(pool->pthreads[i]),NULL,threadpool_function,(void*)pool);
 		}
+		DEBUG_PRINT_FUNCTION_OUT;
 		return pool;
 	}while(0);
 	return NULL;
@@ -70,15 +74,17 @@ struct threadpool* threadpool_init(int thread_num, int queue_max_num)
 //向线程池添加任务
 int threadpool_add_job(struct threadpool* pool, void* (*callback_function)(void *arg), void *arg)
 {
+	DEBUG_PRINT_FUNCTION_IN
 	assert(pool != NULL);
 	assert(callback_function != NULL);
 	assert(arg != NULL);
 
 	pthread_mutex_lock(&(pool->mutex));
+	DEBUG_PRINT_PROCESS("获得互斥锁");
 	while((pool->queue_cur_num == pool->queue_max_num) && !(pool->queue_close || pool->pool_close))
 	{
 		// 队列满时等待
-		DEBUG_PRINT_PROCESS("队列已满");
+		DEBUG_PRINT_PROCESS("队列已满，等待线程处理数据后空出队列");
 		pthread_cond_wait(&(pool->queue_not_full),&(pool->mutex));
 	}
 
@@ -118,6 +124,7 @@ int threadpool_add_job(struct threadpool* pool, void* (*callback_function)(void 
 
 	pool->queue_cur_num++;
 	pthread_mutex_unlock(&(pool->mutex));
+	DEBUG_PRINT_FUNCTION_OUT;
 	return 0;
 }
 
@@ -125,17 +132,18 @@ int threadpool_add_job(struct threadpool* pool, void* (*callback_function)(void 
 //arg为线程池pool
 void* threadpool_function(void* arg)
 {
+	DEBUG_PRINT_FUNCTION_IN
 	struct threadpool* pool = (struct threadpool*)arg;
 	struct job* pjob = NULL;
 	//线程死循环，从队列中取消息并调用回调函数处理数据
 	while(1)
 	{
 		pthread_mutex_lock(&(pool->mutex));
+		DEBUG_PRINT_PROCESS("获得互斥锁");
 		while((pool->queue_cur_num == 0) && !pool->pool_close)
 		{
 			//任务队列为空，则等待任务
 			DEBUG_PRINT_PROCESS("线程等待任务队列非空");
-			cout << endl;
 			pthread_cond_wait(&(pool->queue_not_empty),&(pool->mutex));
 		}
 		if(pool->pool_close)
@@ -168,18 +176,22 @@ void* threadpool_function(void* arg)
 		pthread_mutex_unlock(&(pool->mutex));
 
 		//线程调用回调函数处理数据
-		DEBUG_PRINT_PROCESS("处理消息");
+		DEBUG_PRINT_PROCESS("正在处理消息");
 		(*(pjob->callback_function))(pjob->arg);
 		free(pjob);
 		pjob = NULL;
 	}
+	DEBUG_PRINT_FUNCTION_OUT;
 }
 
 // 销毁线程池
 int threadpool_destory(struct threadpool* pool)
 {
+	DEBUG_PRINT_FUNCTION_IN
 	assert(pool != NULL);
 	pthread_mutex_lock(&(pool->mutex));
+	DEBUG_PRINT_PROCESS("获得互斥锁");
+	DEBUG_PRINT_PROCESS("准备销毁线程池");
 	//若线程池已经销毁
 	if(pool->queue_close || pool->pool_close)
 	{
@@ -224,6 +236,7 @@ int threadpool_destory(struct threadpool* pool)
 		free(p);
 	}
 	free(pool);
+	DEBUG_PRINT_FUNCTION_OUT;
 	return 0;
 }
 
@@ -232,12 +245,13 @@ void* work(void* arg)
 {
 	char* p = (char*) arg;
 	printf("threadpool callback function:%s.\n",p);
-	sleep(1);
+	usleep(rand()%1000000+100000);
 }
 
 int main()
 {
-	struct threadpool* pool = threadpool_init(6,20);
+	DEBUG_PRINT_FUNCTION_IN;
+	struct threadpool* pool = threadpool_init(4,8);
 	char* arg[40] ;
 	for(int i=0; i<40; i++)
 	{
@@ -248,12 +262,14 @@ int main()
 		threadpool_add_job(pool,work,arg[i]);
 	}
 
-	sleep(5);
+	sleep(2);
 	threadpool_destory(pool);
 
 	for(int i=0; i<40;i++)
 		free(arg[i]);
 
+	DEBUG_PRINT_FUNCTION_OUT;
+	sleep(20);
 	return 0;
 }
 
