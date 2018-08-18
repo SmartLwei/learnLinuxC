@@ -1,13 +1,23 @@
 /**
+用法
+#include <sys.types.h>
+#include <sys/stat.h>
+返回值：成功返回0，出错返回-1
+int mkfifo(const char *pathname, mode_t mode);
+mode常用参数    0777
+
+发送方：
+int fd = open(const char* pathName, mode_t mode);
+write(fd, buf, bufLen);
+close(fd);
+
+
+说明
 FIFO，也称为命名管道，它是一种文件类型。
 特点
 FIFO可以在无关的进程之间交换数据，与无名管道不同。
 FIFO有路径名与之相关联，它以一种特殊设备文件形式存在于文件系统中。
-
-2、原型
-#include <sys/stat.h>
-返回值：成功返回0，出错返回-1
-int mkfifo(const char *pathname, mode_t mode);
+FIFO先进先出
 */
 
 #include <stdio.h>
@@ -16,6 +26,8 @@ int mkfifo(const char *pathname, mode_t mode);
 #include <fcntl.h>    // O_WRONLY
 #include <sys/stat.h>
 #include <time.h>     // time
+#define FIFONAME "myFiFo"
+
 
 int main()
 {
@@ -24,11 +36,14 @@ int main()
 	char buf[1024];
 	time_t tp;
 
-	printf("I am %d process.\n", getpid()); // 说明进程ID
+	// 说明进程ID
+	printf("I am %d process.\n", getpid());
 
-	if ((fd = open("fifo1", O_WRONLY)) < 0) // 以写打开一个FIFO 
+	// 以写打开一个FIFO
+	if ((fd = open(FIFONAME, O_WRONLY)) < 0)
 	{
 		perror("Open FIFO Failed");
+		printf("Open read entity first please\n");
 		exit(1);
 	}
 
@@ -43,10 +58,11 @@ int main()
 			close(fd);
 			exit(1);
 		}
-		sleep(1);  // 休眠1秒
+		sleep(1);
 	}
 
-	close(fd);  // 关闭FIFO文件
+	// 关闭FIFO文件
+	close(fd);
 	return 0;
 }
 

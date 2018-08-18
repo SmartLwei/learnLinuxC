@@ -1,3 +1,34 @@
+/*
+* 信号量使用方法
+* int semget(key_t key, int nsems, int semflg);
+* 成功返回信号量，失败返回-1
+* 
+* 改变信号量的值
+* int semop(int semid, struct sembuf* sops, unsigned nsops);
+* 其中
+* struct sembuf
+* {
+* 	short sem_num; 	//除非使用一组信号量，否则为0
+*	short sem_op; 	//信号量在一次操作中需要改变的数据，通常是两个数
+*			//一个是-1，即P(等待)操作，一个是+1，即V(发送信号)操作
+*	short sem_flg;	//通常为SEM——UNDO,使操作系统跟踪信号
+			//并在进程没有释放该信号量而终止时，操作系统释放信号量
+* }
+*
+* 控制信号量
+* int semctl(int semid, int semnu, int cmd[, semun un])
+* 如果有第四个参数,则通常为semnu参数
+* union semnu
+* {
+* 	int val;
+*	struct semid_ds *buf;
+*	unsigned short *arry;
+* }
+* 
+*/
+
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -75,7 +106,8 @@ int del_sem(int sem_id)
 
 int main()
 {
-   int sem_id;  // 信号量集ID
+    // 信号量集ID
+    int sem_id;  
    key_t key;
    pid_t pid;
 
