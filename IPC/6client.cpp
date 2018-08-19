@@ -5,7 +5,7 @@
 #include<sys/msg.h>  // message queue
 #include<string.h>   // memcpy
 
- // 消息队列结构
+// 消息队列结构
 struct msg_form
 {
 	long mtype;
@@ -21,8 +21,8 @@ union semun
 };
 
 // P操作:
-//  若信号量值为1，获取资源并将信号量值-1 
-//  若信号量值为0，进程挂起等待
+// 若信号量值为1，获取资源并将信号量值-1 
+// 若信号量值为0，进程挂起等待
 int sem_p(int sem_id)
 {
 	struct sembuf sbuf;
@@ -39,8 +39,8 @@ int sem_p(int sem_id)
 }
 
 // V操作：
-//  释放资源并将信号量值+1
-//  如果有进程正在挂起等待，则唤醒它们
+// 释放资源并将信号量值+1
+// 如果有进程正在挂起等待，则唤醒它们
 int sem_v(int sem_id)
 {
 	struct sembuf sbuf;
@@ -63,9 +63,10 @@ int main()
 	int shmid, semid, msqid;
 	char *shm;
 	struct msg_form msg;
-	int flag = 1; /*while循环条件*/
+	//while循环条件
+	int flag = 1;
 
-	   // 获取key值
+	// 获取key值
 	if ((key = ftok(".", 'z')) < 0)
 	{
 		perror("ftok error");
@@ -81,7 +82,7 @@ int main()
 
 	// 连接共享内存
 	shm = (char*)shmat(shmid, 0, 0);
-	if ((int)shm == -1)
+	if (shm == (void*)-1)
 	{
 		perror("Attach Shared Memory Error");
 		exit(1);
@@ -116,14 +117,17 @@ int main()
 		switch (c)
 		{
 		case 'r':
-			printf("Data to send: ");
-			sem_p(semid);  /*访问资源*/
+			printf("Data to be send: ");
+			//访问资源
+			sem_p(semid);
 			scanf("%s", shm);
-			sem_v(semid);  /*释放资源*/
-			/*清空标准输入缓冲区*/
+			//释放资源
+			sem_v(semid);
+			//清空标准输入缓冲区
 			while ((c = getchar()) != '\n' && c != EOF);
 			msg.mtype = 888;
-			msg.mtext = 'r';  /*发送消息通知服务器读数据*/
+			//发送消息通知服务器读数据
+			msg.mtext = 'r';
 			msgsnd(msqid, &msg, sizeof(msg.mtext), 0);
 			break;
 		case 'q':
@@ -134,7 +138,7 @@ int main()
 			break;
 		default:
 			printf("Wrong input!\n");
-			/*清空标准输入缓冲区*/
+			//清空标准输入缓冲区
 			while ((c = getchar()) != '\n' && c != EOF);
 		}
 	}

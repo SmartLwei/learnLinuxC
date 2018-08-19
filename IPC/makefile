@@ -11,7 +11,7 @@ TARGET := $(subst .cpp, ,$(OBJECTS_CPP))
 all: $(TARGET)
 
 % : %.cpp
-	$(CXX) $< $(LDFLAG) -o $@
+	$(CXX) $(CFLAGS) $< $(LDFLAG) -o $@
 
 
 clean:

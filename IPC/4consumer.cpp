@@ -10,6 +10,24 @@
 * int shmdt(const void* shmaddr);
 * 删除共享内存
 * shmctl(shmid, IPC_RMID, 0);
+*
+*
+*在内核中共享内存的实现——仅供参考
+struct shmid_ds
+{
+	struct ipc_perm shm_perm;	//操作权限
+	int shm_segsz;			//段的大小（以字节为单位
+	time_t shm_atime;		//最后一个进程附加到该段的时间
+	time_t shm_dtime;		//最后一个进程离开该段的时间
+	time_t shm_ctime;		//最后一个进程修改该段的时间
+	unsigned short shm_cpid; 	//创建该段进程的pid
+	unsigned short shm_lpid;	//在该段上操作的最后1个进程的pid
+	short shm_nattch;		//当前附加到该段的进程的个数
+	//下面是私有的
+        unsigned short shm_npages;	//段的大小（以页为单位）
+	unsigned long *shm_pages;	//指向frames->SHMMAX的指针数组
+	struct vm_area_struct *attaches;	//对共享段的描述
+};
 **/
 
 #include <stdio.h>
