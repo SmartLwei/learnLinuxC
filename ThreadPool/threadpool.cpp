@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <sstream>
-#include "threadpool2.h"
+#include "threadpool.h"
 using std::cout; using std::cin; using std::endl;
 using std::stringstream;
 
