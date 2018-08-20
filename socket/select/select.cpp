@@ -32,6 +32,7 @@ int main()
 	struct timeval timeout;
 	///dev/tty表示当前终端
 	keyboard = open("/dev/tty",O_RDONLY | O_NONBLOCK);
+	printf("keyboard = %d\n", keyboard);
 	assert(keyboard > 0);
 	while(1)
 	{
