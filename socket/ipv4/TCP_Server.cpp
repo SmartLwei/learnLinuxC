@@ -74,18 +74,18 @@ struct sockaddr
 #include<sys/socket.h>
 #include<netinet/in.h>
 
-#define DEFAULT_PORT 8000
+#define PORT 7788
 #define MAXLINE 4096
 
 int main(int argc, char** argv)
 {
-    int socket_fd, connect_fd;
+    int serverfd, connect_fd;
     struct sockaddr_in servaddr;
     char buff[MAXLINE] = {0};
     int readLen = 0, writeLen = 0;
     
     //申请Socket
-    if( (socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1 )
+    if( (serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1 )
     {
         printf("create socket error: %s(errno: %d)\n",strerror(errno),errno);
         exit(0);
@@ -97,17 +97,27 @@ int main(int argc, char** argv)
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(DEFAULT_PORT);
+    servaddr.sin_port = htons(PORT);
 
+	//如果连续多次打开/关闭服务器，可能因为time_wait导致bind失败
+	//设置socket参数，来避免time_wait
+	int on=1;  
+	if((setsockopt(serverfd,SOL_SOCKET,SO_REUSEADDR,&on,sizeof(on)))<0)  
+	{
+		perror("setsockopt failed");
+		goto end;
+	}
+	
     //将地址绑定到套接字上
-    if(bind(socket_fd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1)
+    if(bind(serverfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1)
     {
         printf("bind socket error: %s(errno: %d)\n",strerror(errno),errno);
+        printf("if errno is 98, try two minutes later\n");
         goto end;
     }
 
     //侦听该socket
-    if( listen(socket_fd, 10) == -1)    
+    if( listen(serverfd, 10) == -1)    
     {
         printf("listen socket error: %s(errno: %d)\n",strerror(errno),errno);
         goto end;
@@ -116,7 +126,7 @@ int main(int argc, char** argv)
     //信息交互
     printf("======waiting for client's request======\n");
     //阻塞直到有客户端连接
-    if((connect_fd = accept(socket_fd, (struct sockaddr*)NULL, NULL)) == -1)
+    if((connect_fd = accept(serverfd, (struct sockaddr*)NULL, NULL)) == -1)
     {
         printf("accept socket error: %s(errno: %d)",strerror(errno),errno);
         goto end;
@@ -143,6 +153,8 @@ int main(int argc, char** argv)
     
 end:
     //关闭服务器socket
-    close(socket_fd);
+    printf("close socket\n");
+    close(serverfd);
 }
+
 

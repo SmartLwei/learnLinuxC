@@ -49,8 +49,23 @@ int main(int argc, char* argv[])
     //设置服务器的网络地址
     memset(&serv_addr,0,sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
     serv_addr.sin_port = htons(SERVER_PORT);
+    if(argc == 1)
+    {
+        if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)
+        {
+            printf("inet_pton error for %s\n",argv[1]);
+            goto end;
+        }
+    }
+    else
+    {
+        if(inet_pton(AF_INET,argv[1], &serv_addr.sin_addr)<=0)
+        {
+            printf("inet_pton error for %s\n",argv[1]);
+            goto end;
+        }
+    }
     
     //发送消息到服务器
     struct sockaddr_in src;

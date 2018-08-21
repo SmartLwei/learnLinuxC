@@ -27,7 +27,7 @@ close(fd)
 #include <netinet/in.h>
 #include <arpa/inet.h> //inet_pton函数
 
-#define DEFAULT_PORT 8000
+#define PORT 7788
 #define MAXLINE 4096
 
 int main(int argc, char**argv)
@@ -48,7 +48,7 @@ int main(int argc, char**argv)
 	//设置服务器端网络地址：协议+ip地址+端口号
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(8000);
+    servaddr.sin_port = htons(PORT);
     if(argc == 1)
     {
         if(inet_pton(AF_INET,"127.0.0.1",&servaddr.sin_addr)<=0)
@@ -97,5 +97,7 @@ int main(int argc, char**argv)
     
 end:
     //关闭与服务器的连接
+    printf("close socket\n");
     close(sockfd);
 }
+
