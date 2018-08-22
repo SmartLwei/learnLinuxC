@@ -25,11 +25,14 @@ int select(int nfds, fd_set* readFds, fd_set* writeFds, fd_set* exceptfds, struc
 #include <memory.h>
 
 #define DEFAULT_PORT 6666
+#define MAXLINE 2048
+#define LISTENQ 5
+
 int main(int argc, char* argv[])
 {
 	int serverfd, acceptedfd;
 	struct sockaddr_in serv_addr, cli_addr;
-	unsigned int sin_size, serv_port = 6666, lisnum = 10;
+	socklen_t sin_size;
 	
 	//获取服务器socket
 	if((serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -38,11 +41,13 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	
-	//绑定ip地址和端口号
+	//设置网络地址：协议+ip地址+端口号
 	memset(&serv_addr, 0, sizeof(struct sockaddr_in));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(DEFAULT_PORT);
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	
+	//绑定地址
 	if(bind(serverfd, (struct sockaddr*)&serv_addr, sizeof(sockaddr)) == -1)
 	{
 		perror("bind failed");
@@ -50,7 +55,7 @@ int main(int argc, char* argv[])
 	}
 	
 	//侦听服务器fd
-	if(listen(serverfd, lisnum) == -1)
+	if(listen(serverfd, 5) == -1)
 	{
 		perror("listen failed");
 		return -1;
@@ -62,7 +67,7 @@ int main(int argc, char* argv[])
 	struct timeval tv;
 	int client_sockfd[5] = {0};
 	int conn_count = 0;
-	char buf[1024] = {0};
+	char buf[MAXLINE] = {0};
 	int ret = 0;
 	
 	while(1)
@@ -101,7 +106,7 @@ int main(int argc, char* argv[])
 			if(FD_ISSET(client_sockfd[i], &client_fdset))
 			{
 				printf("start recv from client[%d]\n", i);
-				ret = recv(client_sockfd[i], buf, 1024, 0);
+				ret = recv(client_sockfd[i], buf, MAXLINE, 0);
 				printf("recvLen = %d\n", ret);
 				if(ret <= 0)
 				{
@@ -121,7 +126,7 @@ int main(int argc, char* argv[])
 				}
 			}
 		}
-		bzero(buf, 1024);
+		bzero(buf, MAXLINE);
 		
 		//查看是否有新的客户端的连接请求
 		if(FD_ISSET(serverfd, &client_fdset))

@@ -1,0 +1,4 @@
+ipv4文件夹下包含了TCP，UDP客户端服务器的最简单的操作，不包括任何花梢的控制
+ipv6文件夹下包含了ipv6的最简单的操作
+unixDomain文件夹下为AF_UNIX域下进程间通信的方式
+select, pool, epool为多路复用

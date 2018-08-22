@@ -99,7 +99,7 @@ int main(int argc, char** argv)
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(PORT);
 
-	//如果连续多次打开/关闭服务器，可能因为time_wait导致bind失败
+	//如果短时间内连续多次打开/关闭服务器，可能因为time_wait导致bind失败
 	//设置socket参数，来避免time_wait
 	int on=1;  
 	if((setsockopt(serverfd,SOL_SOCKET,SO_REUSEADDR,&on,sizeof(on)))<0)  

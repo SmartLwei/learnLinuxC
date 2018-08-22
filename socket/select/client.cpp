@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 		buf[strlen(buf)] = '\0';
 		if(memcmp(buf, "quit", 4) == 0)
 			break;
-		send(connectedfd, buf, 1024, 0);
+		send(connectedfd, buf, strlen(buf), 0);
 	}
 	
 	//关闭连接

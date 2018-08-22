@@ -43,7 +43,7 @@ POLLNVAL	指定的文件描述符非法
 #include <poll.h>
 
 #define IPADDRESS "127.0.0.1"
-#define PORT 7777
+#define PORT 6666
 #define MAXLINE 1024
 #define LISTENQ 5
 #define OPEN_MAX 1000
@@ -57,9 +57,6 @@ int main()
 	int connectedfd;
 	char buf[MAXLINE] = {0};
 	struct sockaddr_in serv_addr;
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	serv_addr.sin_port = htons(PORT);
 
 	//申请socket
 	if((connectedfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -68,11 +65,16 @@ int main()
 		return -1;
 	}
 	
+	//设置服务器网络地址
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	serv_addr.sin_port = htons(PORT);
+	
 	//连接服务器
 	if(connect(connectedfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
 	{
 		perror("connect failed");
-		return -1;
+		goto end;
 	}
 	
 	//跟服务器打招呼
@@ -84,7 +86,7 @@ int main()
 	if(readLen == 0)
 	{
 		printf("Server is closed\n");
-		close(connectedfd);
+		goto end;
 	}
 	else
 	{
@@ -115,8 +117,7 @@ int main()
 			if(readLen == 0)
 			{
 				printf("Server is closed\n");
-				close(connectedfd);
-				return 0;
+				goto end;
 			}
 			else
 			{
@@ -125,32 +126,32 @@ int main()
 			}
 		}
 		
-		//测试标准输入是否有数据
+		//测试标准输入是否有数据，如果有，发送到服务器
 		if(fds[1].revents & POLLIN)
 		{
 			printf("There are msg from stdin\n");
 			bzero(buf, MAXLINE);
+			//从键盘读取输入
 			readLen = read(STDIN_FILENO, buf, MAXLINE);
-			printf("readLen = ", readLen);
+			printf("readLen = %d\n", readLen);
 			if(readLen == 0)
 			{
-				shutdown(fds[0].fd, SHUT_WR);
-				continue;
+				goto end;
 			}
 			
+			//将消息发送给服务器
+			writeLen = send(connectedfd, buf, readLen, 0);
+			printf("writeLen = %d\n", writeLen);
+			if(writeLen == 0)
+			{
+				goto end;
+			}
 		}
 		
 	}
 	
-	
+end:
+	//关闭连接
+	close(connectedfd);
 	return 0;
 }
-
-
-
-
-
-
-
-
-

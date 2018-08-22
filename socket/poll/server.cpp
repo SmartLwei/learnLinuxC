@@ -43,16 +43,21 @@ POLLNVAL	指定的文件描述符非法
 #include <poll.h>
 
 #define IPADDRESS "127.0.0.1"
-#define PORT 7777
+#define PORT 6666
 #define MAXLINE 1024
 #define LISTENQ 5
-#define OPEN_MAX 1000
-#define INFTIM -1
+#define OPEN_MAX 3
 
 int main()
 {
 	char buf[MAXLINE] = {0};
 	int serverfd, acceptedfd;
+	//poll的返回值，表示有多少个fd可操作
+	int nready;
+	//fd的个数
+	int count = 1;
+	int readLen = 0;
+	int writeLen = 0;
 	struct sockaddr_in serv_addr, cli_addr;
 	unsigned int sin_size = sizeof(struct sockaddr_in);
 	
@@ -61,6 +66,15 @@ int main()
 	{
 		perror("Apply for socket failed");
 		return -1;
+	}
+	
+	//如果短时间内连续多次打开/关闭服务器，可能因为time_wait导致bind失败
+	//设置socket参数，来避免time_wait
+	int on=1;  
+	if((setsockopt(serverfd,SOL_SOCKET,SO_REUSEADDR,&on,sizeof(on)))<0)  
+	{
+		perror("setsockopt failed");
+		goto end;
 	}
 	
 	//bind socket
@@ -83,21 +97,17 @@ int main()
 	
 	//新建pollfd并初始化
 	struct pollfd clientfds[OPEN_MAX];
+	//clientfds[0]用于监视新的连接请求
 	clientfds[0].fd = serverfd;
 	clientfds[0].events = POLLIN;
 	for(int i=1; i<OPEN_MAX; i++)
 		clientfds[i].fd = -1;
-		
-	
-	int nready;
-	int count = 1;
-	int readLen = 0;
-	int writeLen = 0;
 	
 	while(1)
 	{
 		//获取可用fd的个数
-		nready = poll(clientfds, count, INFTIM);
+		//第三个参数设为-1表示阻塞等待
+		nready = poll(clientfds, count, -1);
 		if(nready == -1)
 		{
 			perror("poll failed");
@@ -121,7 +131,9 @@ int main()
 					return -1;
 				}
 			}
+			//打印客户端参数
 			fprintf(stdout, "accept a new client: fd = %d\nip = %s, port = %d\n", acceptedfd, inet_ntoa(cli_addr.sin_addr),cli_addr.sin_port);
+			
 			//将新的连接添加到数组中
 			if(count < OPEN_MAX)
 			{
@@ -129,15 +141,16 @@ int main()
 				{
 					if(clientfds[i].fd < 0)
 					{
-						clientfds[i].fd = acceptedfd;
+						//与客户端交互
 						writeLen = send(acceptedfd, "Hello, this server, Welcome!", 28, 0);
 						printf("writeLen = %d\n", writeLen);
 						bzero(buf, MAXLINE);
 						readLen = recv(acceptedfd, buf, MAXLINE, 0);
 						buf[readLen] = '\0';
 						printf("readLen = %d\n", readLen);
-						printf("recvMsg is: %s\n", buf);
+						printf("recvMsg from %dth client is: %s\n", i, buf);
 						//将新的描述符添加到读描述符集合中
+						clientfds[i].fd = acceptedfd;
 						clientfds[i].events = POLLIN;
 						count++;
 						break;
@@ -147,14 +160,16 @@ int main()
 			//如果连接数量过多，则握手后关闭会话
 			else
 			{
+				//与客户端交互
 				printf("There are too many clients\n");
+				printf("We only supported %d clinets\n", OPEN_MAX-1);
 				writeLen = send(acceptedfd, "closeClient", 11, 0);
 				printf("writeLen = %d\n", writeLen);
 				bzero(buf, MAXLINE);
 				readLen = recv(acceptedfd, buf, MAXLINE, 0);
 				buf[readLen] = '\0';
 				printf("readLen = %d\n", readLen);
-				printf("recvMsg is: %s\n", buf);
+				printf("recvMsg from client is: %s\n", buf);
 				close(acceptedfd);
 			}
 			
@@ -187,7 +202,9 @@ int main()
 					continue;
 				}
 				buf[readLen] = '\0';
-				printf("readMsg is: %s\n", buf);
+				printf("recvMsg from %dth client is: %s\n", i, buf);
+				
+				//客户端控制服务器关闭的方法之一
 				if(memcmp(buf,"closeServer", 11) == 0)
 					goto end;
 			}
@@ -204,6 +221,7 @@ end:
 		if(clientfds[i].fd != -1)
 			close(clientfds[i].fd);
 	}
+	//关闭服务器
 	close(serverfd);
 	
 	return 0;
