@@ -82,7 +82,7 @@ int main()
 	/*
 	笔记
 	substr()用于求一个字符串的子串
-	string.substr(字串第一个字符的下标，字串尾字符的下标+1);
+	string.substr(字串第一个字符的下标，子字符串的长度);
 	如果不指定尾字符的下标，那么默认设置为string.length()
 	*/
 	string str1 = strtemp.substr(0,k);
