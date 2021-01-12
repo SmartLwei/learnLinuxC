@@ -1,16 +1,7 @@
 /**
-* copywrite: Lwei
-* smartlwei@163.com
-* 主要参考了这一篇博客 https://www.cnblogs.com/onepixel/articles/7674659.html
-* 但是本文档的内容与该博客的内容差别很大，因此结合起来参考效果更好
-* 博客中有很多动图，参考价值很大
-* 本文档中包含了大量的说明和例子，旨在将排序过程讲得更加清晰
-
-* 除非无法避免，本文档的所有排序算法都是按照从小到大，从前往后排序。
-* 其他的方案如从后往前，从大到小排序方案过程相似，博客中有的算法就是采用的这样的过程。
-	
+* copywrite: smartlwei@163.com
+* 参考博客 https://www.cnblogs.com/onepixel/articles/7674659.html
 */
-
 
 #include <iostream>
 #include <vector>
@@ -28,7 +19,8 @@ static void printa(const vector<int>& arr)
 	cout << endl;
 }
 
-//检查序列是否是从小到大排列，正确返回0，错误程序阻塞以排错 //错误返回-1
+
+//检查序列是否从小到大排列，正确返回0，错误程序阻塞以排错，并返回-1
 static int checkArray(const vector<int>& arr)
 {
 	int len = arr.size();
@@ -36,10 +28,6 @@ static int checkArray(const vector<int>& arr)
 	{
 		if (arr[i] > arr[i+1])
 		{
-			cout << endl << endl 
-				<< "******************" << endl 
-				<< "****** Error ****** " 
-				<< "******************" << endl << endl <<endl;
 			cout << "序列不是按照从小到大排序" << endl;
 			printa(arr);
 			getchar();
